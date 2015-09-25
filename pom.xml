@@ -55,11 +55,13 @@
   </repositories>
 
   <dependencies>
+  	<!--
     <dependency>
       <groupId>io.socket</groupId>
       <artifactId>engine.io-client</artifactId>
       <version>0.6.1</version>
     </dependency>
+    -->
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>

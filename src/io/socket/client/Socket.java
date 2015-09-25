@@ -5,9 +5,12 @@ import io.socket.hasbinary.HasBinary;
 import io.socket.parser.Packet;
 import io.socket.parser.Parser;
 import io.socket.thread.EventThread;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.util.Log;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -179,7 +182,7 @@ public class Socket extends Emitter {
                 Packet<JSONArray> packet = new Packet<JSONArray>(parserType, jsonArgs);
 
                 if (_args.get(_args.size() - 1) instanceof Ack) {
-                    logger.fine(String.format("emitting packet with ack id %d", Socket.this.ids));
+                    Log.d("SocketIOClient", String.format("emitting packet with ack id %d", Socket.this.ids));
                     Socket.this.acks.put(Socket.this.ids, (Ack)_args.remove(_args.size() - 1));
                     jsonArgs = remove(jsonArgs, jsonArgs.length() - 1);
                     packet.data = jsonArgs;
@@ -238,7 +241,7 @@ public class Socket extends Emitter {
                 int parserType = HasBinary.hasBinary(jsonArgs) ? Parser.BINARY_EVENT : Parser.EVENT;
                 Packet<JSONArray> packet = new Packet<JSONArray>(parserType, jsonArgs);
 
-                logger.fine(String.format("emitting packet with ack id %d", ids));
+                Log.d("SocketIOClient", String.format("emitting packet with ack id %d", ids));
                 Socket.this.acks.put(ids, ack);
                 packet.id = ids++;
 
@@ -254,7 +257,7 @@ public class Socket extends Emitter {
     }
 
     private void onopen() {
-        logger.fine("transport is open - connecting");
+        Log.d("SocketIOClient", "transport is open - connecting");
 
         if (!"/".equals(this.nsp)) {
             this.packet(new Packet(Parser.CONNECT));
@@ -262,7 +265,7 @@ public class Socket extends Emitter {
     }
 
     private void onclose(String reason) {
-        logger.fine(String.format("close (%s)", reason));
+        Log.d("SocketIOClient", String.format("close (%s)", reason));
         this.connected = false;
         this.id = null;
         this.emit(EVENT_DISCONNECT, reason);
@@ -304,10 +307,10 @@ public class Socket extends Emitter {
 
     private void onevent(Packet<JSONArray> packet) {
         List<Object> args = new ArrayList<Object>(Arrays.asList(toArray(packet.data)));
-        logger.fine(String.format("emitting event %s", args));
+        Log.d("SocketIOClient", String.format("emitting event %s", args));
 
         if (packet.id >= 0) {
-            logger.fine("attaching ack callback to event");
+            Log.d("SocketIOClient", "attaching ack callback to event");
             args.add(this.ack(packet.id));
         }
 
@@ -331,7 +334,7 @@ public class Socket extends Emitter {
                     public void run() {
                         if (sent[0]) return;
                         sent[0] = true;
-                        logger.fine(String.format("sending ack %s", args.length != 0 ? args : null));
+                        Log.d("SocketIOClient", String.format("sending ack %s", args.length != 0 ? args : null));
 
                         int type = HasBinary.hasBinary(args) ? Parser.BINARY_ACK : Parser.ACK;
                         Packet<JSONArray> packet = new Packet<JSONArray>(type, new JSONArray(Arrays.asList(args)));
@@ -346,10 +349,10 @@ public class Socket extends Emitter {
     private void onack(Packet<JSONArray> packet) {
         Ack fn = this.acks.remove(packet.id);
         if (fn != null) {
-            logger.fine(String.format("calling ack %s with %s", packet.id, packet.data));
+            Log.d("SocketIOClient", String.format("calling ack %s with %s", packet.id, packet.data));
             fn.call(toArray(packet.data));
         } else {
-            logger.fine(String.format("bad ack %s", packet.id));
+            Log.d("SocketIOClient", String.format("bad ack %s", packet.id));
         }
     }
 
@@ -375,7 +378,7 @@ public class Socket extends Emitter {
     }
 
     private void ondisconnect() {
-        logger.fine(String.format("server disconnect (%s)", this.nsp));
+        Log.d("SocketIOClient", String.format("server disconnect (%s)", this.nsp));
         this.destroy();
         this.onclose("io server disconnect");
     }
@@ -402,7 +405,7 @@ public class Socket extends Emitter {
             @Override
             public void run() {
                 if (Socket.this.connected) {
-                    logger.fine(String.format("performing disconnect (%s)", Socket.this.nsp));
+                    Log.d("SocketIOClient", String.format("performing disconnect (%s)", Socket.this.nsp));
                     Socket.this.packet(new Packet(Parser.DISCONNECT));
                 }
 

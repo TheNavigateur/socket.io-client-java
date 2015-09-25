@@ -8,6 +8,9 @@ import io.socket.thread.EventThread;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
+
+import android.util.Log;
+
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -226,8 +229,11 @@ public class Manager extends Emitter {
     }
 
     private void maybeReconnectOnOpen() {
+    	Log.d("SocketIOClient", "CALLING MAYBERECONNECTONOPEN");
+    	
         // Only try to reconnect if it's the first time we're connecting
         if (!this.reconnecting && this._reconnection && this.backoff.getAttempts() == 0) {
+        	Log.d("SocketIOClient", "CALLING RECONNECT VIA MAYBERECONNECTONOPEN");
             this.reconnect();
         }
     }
@@ -246,10 +252,10 @@ public class Manager extends Emitter {
         EventThread.exec(new Runnable() {
             @Override
             public void run() {
-                logger.fine(String.format("readyState %s", Manager.this.readyState));
+                Log.d("SocketIOClient", String.format("readyState %s", Manager.this.readyState));
                 if (Manager.this.readyState == ReadyState.OPEN || Manager.this.readyState == ReadyState.OPENING) return;
 
-                logger.fine(String.format("opening %s", Manager.this.uri));
+                Log.d("SocketIOClient", String.format("opening %s", Manager.this.uri));
                 Manager.this.engine = new Engine(Manager.this.uri, Manager.this.opts);
                 final io.socket.engineio.client.Socket socket = Manager.this.engine;
                 final Manager self = Manager.this;
@@ -276,7 +282,7 @@ public class Manager extends Emitter {
                     @Override
                     public void call(Object... objects) {
                         Object data = objects.length > 0 ? objects[0] : null;
-                        logger.fine("connect_error");
+                        Log.d("SocketIOClient", "connect_error");
                         self.cleanup();
                         self.readyState = ReadyState.CLOSED;
                         self.emitAll(EVENT_CONNECT_ERROR, data);
@@ -293,7 +299,7 @@ public class Manager extends Emitter {
 
                 if (Manager.this._timeout >= 0) {
                     final long timeout = Manager.this._timeout;
-                    logger.fine(String.format("connection attempt will timeout after %d", timeout));
+                    Log.d("SocketIOClient", String.format("connection attempt will timeout after %d", timeout));
 
                     final Timer timer = new Timer();
                     timer.schedule(new TimerTask() {
@@ -302,11 +308,14 @@ public class Manager extends Emitter {
                             EventThread.exec(new Runnable() {
                                 @Override
                                 public void run() {
-                                    logger.fine(String.format("connect attempt timed out after %d", timeout));
+                                    Log.d("SocketIOClient", String.format("connect attempt timed out after %d", timeout));
                                     openSub.destroy();
                                     socket.close();
                                     socket.emit(Engine.EVENT_ERROR, new SocketIOException("timeout"));
                                     self.emitAll(EVENT_CONNECT_TIMEOUT, timeout);
+                                    
+                                    //NEW: attempt open again?
+                                    Manager.this.open(fn);
                                 }
                             });
                         }
@@ -330,7 +339,7 @@ public class Manager extends Emitter {
     }
 
     private void onopen() {
-        logger.fine("open");
+        Log.d("SocketIOClient", "open");
 
         this.cleanup();
 
@@ -422,7 +431,7 @@ public class Manager extends Emitter {
     }
 
     /*package*/ void packet(Packet packet) {
-        logger.fine(String.format("writing packet %s", packet));
+        Log.d("SocketIOClient", String.format("writing packet %s", packet));
         final Manager self = this;
 
         if (!self.encoding) {
@@ -471,7 +480,7 @@ public class Manager extends Emitter {
     }
 
     private void onclose(String reason) {
-        logger.fine("close");
+        Log.d("SocketIOClient", "close");
         this.cleanup();
         this.backoff.reset();
         this.readyState = ReadyState.CLOSED;
@@ -488,13 +497,13 @@ public class Manager extends Emitter {
         final Manager self = this;
 
         if (this.backoff.getAttempts() >= this._reconnectionAttempts) {
-            logger.fine("reconnect failed");
+            Log.d("SocketIOClient", "reconnect failed");
             this.backoff.reset();
             this.emitAll(EVENT_RECONNECT_FAILED);
             this.reconnecting = false;
         } else {
             long delay = this.backoff.duration();
-            logger.fine(String.format("will wait %dms before reconnect attempt", delay));
+            Log.d("SocketIOClient", String.format("will wait %dms before reconnect attempt", delay));
 
             this.reconnecting = true;
             final Timer timer = new Timer();
@@ -506,7 +515,7 @@ public class Manager extends Emitter {
                         public void run() {
                             if (self.skipReconnect) return;
 
-                            logger.fine("attempting reconnect");
+                            Log.d("SocketIOClient", "attempting reconnect");
                             int attempts = self.backoff.getAttempts();
                             self.emitAll(EVENT_RECONNECT_ATTEMPT, attempts);
                             self.emitAll(EVENT_RECONNECTING, attempts);
@@ -518,12 +527,12 @@ public class Manager extends Emitter {
                                 @Override
                                 public void call(Exception err) {
                                     if (err != null) {
-                                        logger.fine("reconnect attempt error");
+                                        Log.d("SocketIOClient", "reconnect attempt error");
                                         self.reconnecting = false;
                                         self.reconnect();
                                         self.emitAll(EVENT_RECONNECT_ERROR, err);
                                     } else {
-                                        logger.fine("reconnect success");
+                                        Log.d("SocketIOClient", "reconnect success");
                                         self.onreconnect();
                                     }
                                 }
